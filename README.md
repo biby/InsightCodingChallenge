@@ -4,7 +4,7 @@ Coding challenge for Insight Data Engineering camp
 
 This coding challenge is completed using python3
 
-##INSTRUCTIONS: 
+## INSTRUCTIONS: 
 ----------------
 This challenge is to implement two features:
 
@@ -15,7 +15,7 @@ This challenge is to implement two features:
 
 My project contains two files:
 
-##dataFrame.py
+## dataFrame.py
 ----------------
 
 This file contains a dataFrame handling class similar to the dataFrame class of the pandas library.
@@ -26,7 +26,7 @@ It contains collumn and row  handling methods, such as add and drop, casting col
 It contains a general data frame methods such as groupBy, agregate, filter and sort.
 
 
-##borderCrossing.py
+## borderCrossing.py
 ----------------
 
 It contains functions specific to the project:
@@ -44,7 +44,7 @@ The algorithm is the following:
 * Merges all the data and sort it appropriatly.
 * Write to output file.
 
-##Comments:
+## Comments:
 ----------------
 
 For the computation of the average collumn, I made the following assumption:
