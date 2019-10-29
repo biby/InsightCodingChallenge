@@ -100,7 +100,7 @@ class DataFrame:
         if isinstance(collumnName,str):
             try:
                 col = self.collumns.index(collumnName)
-            except ValueError as error
+            except ValueError as error:
                 error.args = ('Collumn ' + collumnName + ' does not exists')
                 raise
                 
