@@ -5,7 +5,6 @@ Coding challenge for Insight Data Engineering camp
 This coding challenge is completed using python3
 
 ## INSTRUCTIONS: 
-----------------
 This challenge is to implement two features:
 
 1. Read the Border_Crossing_Entry_Data file and extract the collumns [Border,Date,Measure,Value]
@@ -16,7 +15,6 @@ This challenge is to implement two features:
 My project contains two files:
 
 ## dataFrame.py
-----------------
 
 This file contains a dataFrame handling class similar to the dataFrame class of the pandas library.
 The data is stored as a list of tuples.
@@ -27,7 +25,6 @@ It contains a general data frame methods such as groupBy, agregate, filter and s
 
 
 ## borderCrossing.py
-----------------
 
 It contains functions specific to the project:
 * A datetype class that can cast the dates in the csv file.
@@ -45,7 +42,6 @@ The algorithm is the following:
 * Write to output file.
 
 ## Comments:
-----------------
 
 For the computation of the average collumn, I made the following assumption:
 If for a given Month, Border and Date there is no data, then the Value is assumed to be 0.
@@ -64,8 +60,12 @@ US-Canada,01/01/2019 12:00:00 AM,Train,10,0
 ```
 
 In order to consider that the monthe of February should just be ignore, it is sufficient to comment the line
-        partaverage = partialaverage(df.getCollumn('Value'),df.getCollumn('Date'))
+```
+    partaverage = partialaverage(df.getCollumn('Value'),df.getCollumn('Date'))
+```
 and uncomment the line
-        #partaverage = partialaverage(df.getCollumn('Value')),
+```
+    #partaverage = partialaverage(df.getCollumn('Value')),
+```
 in the file src/borderCrossing.py
 Note that in this case test_missing_months will fail.
