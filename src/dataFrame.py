@@ -1,19 +1,3 @@
-import time
-
-def timeit(method):
-    def timed(*args, **kw):
-        ts = time.time()
-        result = method(*args, **kw)
-        te = time.time()        
-
-        if 'log_time' in kw:
-            name = kw.get('log_name', method.__name__.upper())
-            kw['log_time'][name] = int((te - ts) * 1000)
-        else:
-            print('%r  %2.2f ms' % \
-                  (method.__name__, (te - ts) * 1000))
-        return result    
-    return timed
 
 class DataFrame:
 
@@ -161,20 +145,31 @@ class DataFrame:
             self.__init__(newDf.collumns,newDf)
         else:
             return newDf
-    @timeit
+
+    def subDataFrame(self, newCollumns,inPlace=True):
+        '''
+            Extract a subdataframes with the collumns being newCollumns.
+        ''' 
+        
+        newDf = DataFrame(newCollumns)
+        
+        newRows = map(lambda row: self._subRow(row,newDf.collumns),self)
+
+        newDf.extend(newRows)
+        if inPlace:
+            self._collumns = newDf.collumns
+            self.data = newDf.data
+        else:
+            return newDf
+        
+        
     def dropCollumns(self,collumnNames,inPlace=True):
         '''
             Drops the collumns collumnNames.
         '''
         cols = [self._indexifyCollumn(collumnName) for collumnName in collumnNames]
         newCollumns = [collumn for i,collumn in enumerate(self.collumns) if i not in cols]
-        
-        for col in cols:
-            newCollumns
-        newDf = DataFrame(newCollumns)
-        
-        newRows = map(lambda row: self._subRow(row,newDf.collumns),self)
-        newDf.data = list(newRows)
+        newDf = self.subDataFrame(newCollumns,inPlace=False)
         if inPlace:
             self._collumns = newDf.collumns
             self.data = newDf.data
@@ -255,7 +250,7 @@ class DataFrame:
     
 
     #I/O tools
-    @timeit
+
     def _fileToLines(self,fileContent):
         '''
             Takesthe fileContent and cleans it and  return a list of lines
@@ -270,16 +265,15 @@ class DataFrame:
                 raise Exception('CSV format Error','')
         return row
 
-    @timeit
     def _extractData(self,fileLines):
         return list(map(lambda line : self._formatRow(line),fileLines))
 
-    @timeit
     def readCsvFile(self,filePath,delimiter=None,titleRow=True, collumnsToRead=None, collumnsToDrop=None):
         '''
         Read a csv file and dataFrame.
         
         Accept a list of collumns to read OR a list of collumns to drop.
+        If a list of collumns to read is given, then the order of the collumns in the dataFrame will be the same as in collumnsToRead
         '''
         self.data = []
         if delimiter == None:
@@ -309,9 +303,9 @@ class DataFrame:
         #Extract lines
         self.data = self._extractData(fileLines)
         
-        if collumnsToRead != None:              
-            collumnsToDrop = [col for col in self.collumns if col not in collumnsToRead]  
-        if collumnsToDrop != None:
+        if collumnsToRead != None:
+            self.subDataFrame(collumnsToRead,inPlace=True)          
+        elif collumnsToDrop != None:
             self.dropCollumns(collumnsToDrop,inPlace=True)
         
         
@@ -331,7 +325,6 @@ class DataFrame:
             
     #General DataFrame functions
 
-    @timeit
     def groupBy(self,key,value=None):
         '''
             
@@ -353,7 +346,6 @@ class DataFrame:
         
         return dataFrameDict
         
-    @timeit
     def agregate(self,aggregationCollumn,agregationFunction=None,inPlace=False):
         '''
             Returns a dataFrame where rows matching on all collumns but aggregationCollumn is replace by one single collumn.
