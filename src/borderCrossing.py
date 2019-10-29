@@ -73,7 +73,7 @@ if __name__=="__main__":
         raise Exception('Expecting input and output file paths')
     inputFilePath = sys.argv[1]
     outputFilePath = sys.argv[2]
-    collumnsToRead = ['Border','Measure','Date','Value']
+    collumnsToRead = ['Border','Date','Measure','Value']
 
 
     df = DataFrame()
