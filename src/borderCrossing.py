@@ -1,10 +1,15 @@
+
+import sys
 import datetime
+import time
+from dataFrame import DataFrame
 
 dateFormat = '%m/%d/%Y %I:%M:%S %p'
 
 class datetype():
     def __init__(self,stringDate):
-        self.dt = datetime.datetime.strptime(stringDate,dateFormat)
+        self.dateFormat=dateFormat
+        self.dt = datetime.datetime.strptime(stringDate,self.dateFormat)
         self = self.dt
 
     def __ge__(self,other):
@@ -25,18 +30,58 @@ class datetype():
 
     def __hash__(self):
         return self.dt.__hash__()
-    def __str__(self):
-        return self.dt.strftime(dateFormat)
-    
-    
 
+    def __str__(self):
+        return self.dt.strftime(self.dateFormat)
+    
+    
+def roundHalfUp(n):
+    '''
+        Round a float to the nearest integers rounding halfs to the upper integers
+    '''
+    q = int(n)
+    r=n%1
+    if r >=.5:
+        return q+1
+    else: 
+        return q
 
 def partialaverage(collumn):
-    partsums = [0]
-    tot=0
-    for i, val in enumerate(collumn[:-1]):
+    if not collumn:
+        return []
+    partialaverages = [0]
+    tot = collumn[0]
+    for i, val in enumerate(collumn[1:]):
+        partialaverages.append(roundHalfUp(tot/(i+1)))
         tot+=val        
-        partsums.append(round(tot/(i+1)+.0001))
-    return partsums
+    return partialaverages
 
+
+if __name__=="__main__":
+    if len(sys.argv)<3:
+        raise Exception('Expecting input and output file paths')
+    inputFilePath = sys.argv[1]
+    outputFilePath = sys.argv[2]
+    collumnsToRead = ['Border','Measure','Date','Value']
+
+
+    df = DataFrame()
+    df.readCsvFile(inputFilePath,collumnsToRead= collumnsToRead)
+    df.castCollumnType('Value',int)
+    df.castCollumnType('Date', datetype)
+
+    df2 = df.agregate('Value')
+    dic = df2.groupBy(['Measure','Border'],df2.collumns)
+    finaldf = DataFrame(df2.collumns+['Average'])
+    for df in dic.values():
+        df.sort(['Date'])
+        partaverage = partialaverage(df.getCollumn('Value'))
+        df = df.addCollumn('Average', newCollumn=partaverage)
+        
+        finaldf.extend(df)
+
+    finaldf.sort(collumns=['Date','Value','Measure','Border'],ascending=False)
+    finaldf.writeCsvFile(outputFilePath)
+    
+    
 
