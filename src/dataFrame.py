@@ -1,214 +1,145 @@
-from functools import reduce
+import time
+
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()        
+
+        if 'log_time' in kw:
+            name = kw.get('log_name', method.__name__.upper())
+            kw['log_time'][name] = int((te - ts) * 1000)
+        else:
+            print('%r  %2.2f ms' % \
+                  (method.__name__, (te - ts) * 1000))
+        return result    
+    return timed
+
 class DataFrame:
 
-    def __init__(self,collumns=None,dataFrames=None):
+    def __init__(self,collumns=None,data=None):
+        self._collumns=None        
+        self.data=[]
         if collumns!=None:
             self._collumns = collumns
-        self.data=[]
-        if dataFrames!=None:
-            for df in dataFrames:
-                self._addDataFrame(df)
-        self._collumnType=None
         
-    def _rowToStr(self,row):
-        return ','.join(map(str,row))
-
-    def addDataFrame(self,df):
-        if df.nbCollumns!=self.nbCollumns:
-            raise Exception('','')
-        self.data.extend(df.data[:])
-
-
-
-    def __str__(self):
-        count=0
-        printstring = self._rowToStr(self.collumns)+'\n'
-        for row in self:
-            if count>10:
-                break
-            count+=1
-            printstring += self._rowToStr(row) + '\n'
-        return printstring
-
+        if data!=None:
+            self.extend(data)
+        
+    
+    # Iteration tools
+    def extend(self,iterable):
+        '''
+            Append an iterable collection of rows to the rows of self
+        '''
+        for row in iterable:
+            self.addRow(row)
+    
     def __len__(self):
+
         return len(self.data)
 
     def __iter__(self):
-        return self.data.__iter__()        
-        
+        '''
+            Iteration on the rows
+        '''
+        return self.data.__iter__()
+
+
+
+    #Printing tools
+
+    def _rowToStr(self,row):
+        '''
+            Return a formated string reprensenting the row.
+        '''
+        return ','.join(map(str,row))
+
+    def __str__(self,printHeader=True, MAXROWS=10):
+        '''
+            Return a printable display of the dataFrame, including the header and MAXROWS row
+            If MAXROWS = -1 then print the whole dataFrame
+        '''
+        if MAXROWS==-1:
+            MAXROWS = len(self)
+        count=0
+        header = ''
+        if printHeader:
+            header = self._rowToStr(self.collumns)+'\n'
+        printstring = '\n'.join(map(self._rowToStr,self.data[:MAXROWS]))
+        return header+printstring
+
+            
+    #Basic Properties  
     @property
     def collumns(self):
         return self._collumns[:]
     
     @collumns.setter
     def collumns(self,collumnsName):    
-        if self._collumns !=None and len(collumnsName)!=self.nbcollumns:
+        if self._collumns !=None and len(collumnsName)!=self.nbCollumns:
             raise Exception('','Lenghts do not match')
-        self.data = tuple(collumnsName)
+        self._collumns = list(collumnsName)
 
     @property
     def nbCollumns(self):
+        ''' 
+            Number of collumns
+        '''
         return len(self._collumns)
 
     @property
     def nbRows(self):
+        '''
+            Number of rows
+        '''
         return len(self.data)
 
     @property
     def size(self):
+        '''
+            Tuple (Number of rows, Number of collumns)
+        '''
         return (self.nbRows,self.nbCollumns)
 
+
+    #Collumn tools
     
+    
+
+    def _indexifyCollumn(self, collumnName):
+        '''
+            Turn collumnName into its index.
+            If the index is given, just returns it.
+            
+        ''' 
+        if isinstance(collumnName,str):
+            col = self.collumns.index(collumnName)
+        elif isinstance(collumnName,int):
+            col = collumnName
+        else:
+            raise Exception('')
+        return col  
+    
+    def castCollumnType(self,collumnName,collumnType):
+        '''
+            Casts the elements of collumn to the type collumnType
+        '''
+        self.mapCollumn(collumnName, collumnType, inPlace=True)
+
     def getCollumn(self,collumn):
-        col = self._indexifycollumn(collumn)
-        return [row[col] for row in self]    
-    
+        ''' 
+        Return the collumn "collumn" of the dataframe as a list
+        ''' 
+        col = self._indexifyCollumn(collumn)
+        return [row[col] for row in self]
 
-    def readCsvFile(self,filePath,delimiter=None,titleRow=True, collumnsToRead=None, collumnsToDrop=None, failSafe=False):
+    def addCollumn(self,collumnName, collumnNumber=-1,defaultValue=None,newCollumn=None, inPlace = False):
         '''
-        Read a csv file and transform it to an array structure.
-        
-        Accept a list of collumns to read OR a list of collumns to drop.
-        If a collumn listed doesn't exists, return an error, unless the failSafe flag is set to True
-        
-        
+            Return a dataFrame with an additional collumn. 
+            The new collumn is either given as newCollumn or filled up with defaultValue
         '''
-        self.data = []
-        if delimiter == None:
-            delimiter =','
-        
-        if collumnsToDrop != None and collumnsToRead != None:
-            raise Exception('','')
 
-        with open(filePath,'r') as csvFile:
-            fileContent = csvFile.read()
-        
-        
-        fileLines = fileContent.splitlines()
-              
-        nbCsvFileCollumns = len(fileLines[0].split(delimiter))
-        
-        self._collumns= None
-        if titleRow:
-            csvCollumns = fileLines.pop(0).split(delimiter)
-            self._collumns = csvCollumns[:]
-            
-        #Deal with the collumnsToRead And collumnsToDrop, to get a list of collumns to keep as indices
-        #Todo: Deal with the failSafe and remove dupplicate code
-        if collumnsToRead != None:
-            collumnFilter = lambda x : x
-            collumnsList = collumnsToRead
-        elif collumnsToDrop != None:
-            collumnFilter = lambda x : not x
-            collumnsList = collumnsToDrop
-        if collumnsList:
-            if all(isinstance(item, int) for item in collumnsToRead):
-                collumnsToKeepIndices = [i for i in range(nbCsvFileCollumns) if collumnFilter(i in collumnsList)]
-            elif all(isinstance(item, str) for item in collumnsList):
-                if not titleRow:
-                    raise Exception('Incompatible Input','')
-                collumnsToKeepIndices = []
-                self._collumns = []
-                for i,c in enumerate(csvCollumns):
-                    if collumnFilter(c in collumnsToRead):
-                        collumnsToKeepIndices.append(i)
-                        self._collumns.append(c)
-        else:
-            collumnsToKeepIndices = list(range(nbCsvFileCollumns))
-        
-        if self._collumns == None:
-            self._collumns = list(map(lambda x: str(x), range(len(collumnsToKeepIndices))))
-                
-
-
-        #Extract rows one by one
-        for line in fileLines:
-            
-            # Remove lines only containing spaces
-            if line.strip()=='':
-                continue
-                            
-            csvrow= list(map(lambda x: x.strip(), line.split(delimiter)))
-            if len(csvrow)!=nbCsvFileCollumns:
-                raise Exception('CSV format Error','')
-            row = tuple([csvrow[i] for i in collumnsToKeepIndices]) 
-            self.data.append(row)
-
-    def writeCsvFile(self,filePath,titleRow=True, collumnsToWrite=None,collumnsToDrop=None, failSafe=False):
-        '''
-        Write the array in a csv file.
-
-        Accept a list of collumns to write OR a list a collumns to drop.
-        If a collumn listed doesn't exists, return an error, unless the failSafe flag is set to True.
-
-        '''
-        pass
-    
-    def _rowvalidity(self,row):
-        if len(row)!=self.nbCollumns:
-            return False
-        return True
-
-    def addRow(self,row):
-        if not self._rowvalidity(row):
-            raise Exception('Unvalid Row','')
-        if self.data==None:
-            self.data = []
-        self.data.append(row)
-
-    def _indexifycollumn(self, collumn):
-        if isinstance(collumn,str):
-            col = self.collumns.index(collumn)
-        else:
-            col = collumn
-        return col
-
-    def sumcollumn(self,collumnToSum,sumfunction=None):
-        col = self._indexifycollumn(collumnToSum)
-  
-        if sumfunction==None:
-            sumfunction = lambda x, y:x+y
-        sumreduce = lambda x,y :sumfunction(x,y[col])
-        initial = self.data[0][col]
-        return reduce(sumreduce,self.data[1:],initial)
-                        
-    def _subRow(self,row, collumns):
-        cols = [self._indexifycollumn(col) for col in collumns]
-        return tuple(row[i] for i in cols)
-
-    def groupBy(self,key,value=None):
-        if value==None:
-            value= self.collumns
-        dataFrameDict={}
-        for row in self:
-            val = dataFrameDict.get(self._subRow(row,key),DataFrame(value))
-            val.addRow(self._subRow(row,value))
-            dataFrameDict[self._subRow(row,key)]=val
-        return dataFrameDict
-
-
-    def agregate(self,collumn,agregationFunction=None):
-        col = self._indexifycollumn(collumn)
-        
-        if agregationFunction==None:
-            agregationFunction = sum
-        key =self.collumns
-        key.pop(col)
-        agregationmap = self.groupBy(key,[collumn])
-
-        finaldf = DataFrame(self.collumns) 
-        for key,val in agregationmap.items():
-            agregatedValue = agregationFunction(val.getCollumn(collumn))
-            finaldf.addRow(key[:col]+(agregatedValue,)+key[col:])
-        return finaldf
-            
-    def castType(self,collumn,collumnType):
-        col = self._indexifycollumn(collumn)
-        for i,row in enumerate(self.data):       
-            self.data[i]=row[:col]+(collumnType(row[col]),)+row[col+1:]
-
-
-    def addCollumn(self,collumnName, collumnNumber=-1,defaultValue=None,newCollumn=None):
         if newCollumn!=None:
             if len(newCollumn) != self.nbRows:
                 raise  Exception('','')
@@ -220,38 +151,80 @@ class DataFrame:
         if collumnNumber==-1:
             newCollumnNames.append(collumnName)
         else:
-            newCollumnNames = newCollumnNames[:collumnNumber]+newCollumnNames[-1]+newCollumnNames[collumnNumber:-1]
+            newCollumnNames.insert(collumnNumber,collumnName)
         newDf = DataFrame(collumns=newCollumnNames)
         for row,newColVal in zip(self,newCollumn):
             newRow = row + (newColVal,)
             newRow = newRow[:collumnNumber]+(newColVal,)+newRow[collumnNumber:-1]
             newDf.addRow(newRow)
-        return newDf
-    
-    def dropCollumn(self,collumnName):
-        col = self._indexifyCollumn(collumnName)
-        newCollumns = self.collumns
-        newCollumns.pop(col)
-        
-
-    def sort(self,collumns, ascending=True):
-        ''' 
-        Sort the rows acording to the collumns list
-
+        if inPlace:
+            self.__init__(newDf.collumns,newDf)
+        else:
+            return newDf
+    @timeit
+    def dropCollumns(self,collumnNames,inPlace=True):
         '''
-        cols = list(map(self._indexifycollumn,collumns))
+            Drops the collumns collumnNames.
+        '''
+        cols = [self._indexifyCollumn(collumnName) for collumnName in collumnNames]
+        newCollumns = [collumn for i,collumn in enumerate(self.collumns) if i not in cols]
         
-        def key(x):
-            return tuple([x[i] for i in cols])
-        self.data.sort(key=key,reverse = not ascending)
+        for col in cols:
+            newCollumns
+        newDf = DataFrame(newCollumns)
         
+        newRows = map(lambda row: self._subRow(row,newDf.collumns),self)
+        newDf.data = list(newRows)
+        if inPlace:
+            self._collumns = newDf.collumns
+            self.data = newDf.data
+        else:
+            return newDf
     
-    def mapCollumn(collumnName, mappingFunction):
-        colIndex = self.collumns.index(collumnName)
+    def mapCollumn(self,collumnName, mappingFunction, inPlace=True):
+        '''
+            Map the collumn collumnName through the function mappingFunction
+        '''
+        col = self._indexifyCollumn(collumnName)
         newData = []
         for row in self.data:
-            newData.append(row[:colIndex]+(mappingFunction(row[colIndex]),)+ row[colIndex+1:]) 
-        self.data = newData       
+            newData.append(row[:col]+(mappingFunction(row[col]),)+ row[col+1:]) 
+
+        if inPlace:        
+            self.data = newData
+        else:
+            df = dataFrame(self.collumns)
+            df.data = newData
+            return df
+
+
+    #Row tools
+
+    def _rowvalidity(self,row):
+        '''
+            Checks if the format of the given Rows matches the one of the dataFrame
+        '''
+        if len(row)!=self.nbCollumns:
+            return False
+        return True
+
+    def _subRow(self,row, collumns):
+        '''
+            Extract a subRow from row corresponding to collumns
+        '''
+        cols = [self._indexifyCollumn(col) for col in collumns]
+        return tuple(row[i] for i in cols)
+  
+    def popRow(index=-1):
+        '''
+            Remove and return row at index (default last).
+    
+            Raises IndexError if dataFrame is empty or index is out of range.
+        '''
+        return self.data.pop(index)
+
+    def getRow(index):
+        return self.data[index]
 
     def filterRows(self,filterFunction):
         ''' 
@@ -263,12 +236,163 @@ class DataFrame:
             newdf.addRow(row) 
         return newdf
 
-    def dropRows(dropFunction):
+    def addRow(self,row,index=None):
+        '''
+            Append a row to the dataFrame at index
+        '''
+        if not self._rowvalidity(row):
+            raise Exception('Unvalid Row','')
+        if index==None:
+            self.data.append(row)
+        else:
+            self.data.insert(index,row)
+
+    def dropRows(self,dropFunction):
         ''' 
         Return array composed of the rows on which the dropFunction is False
+        '''
+        return self.filterRows(lambda x: not dropFunction(x))
+    
+
+    #I/O tools
+    @timeit
+    def _fileToLines(self,fileContent):
+        '''
+            Takesthe fileContent and cleans it and  return a list of lines
+        '''
+        return list(filter(lambda line: line!='', fileContent.splitlines()))
+
+    
+    
+    def _formatRow(self,line):
+        row= tuple(map(lambda x: x.strip(), line.split(self._delimiter)))
+        if not self._rowvalidity(row):
+                raise Exception('CSV format Error','')
+        return row
+
+    @timeit
+    def _extractData(self,fileLines):
+        return list(map(lambda line : self._formatRow(line),fileLines))
+
+    @timeit
+    def readCsvFile(self,filePath,delimiter=None,titleRow=True, collumnsToRead=None, collumnsToDrop=None):
+        '''
+        Read a csv file and dataFrame.
+        
+        Accept a list of collumns to read OR a list of collumns to drop.
+        '''
+        self.data = []
+        if delimiter == None:
+            delimiter =','
+        self._delimiter = delimiter
+        
+        if collumnsToDrop != None and collumnsToRead != None:
+            raise Exception('','')
+
+        with open(filePath,'r') as csvFile:
+            fileContent = csvFile.read()
+
+        
+        #  Extract lines removing empty ones
+        fileLines = self._fileToLines(fileContent)
+        
+        if not fileLines:
+            raise Exception('Empty File')
+        nbCsvFileCollumns = len(fileLines[0].split(delimiter))
+        
+        if titleRow:
+            csvCollumns = fileLines.pop(0).split(delimiter)
+            self.collumns = csvCollumns[:]
+        else:
+            self.collumns = list(map(lambda x: str(x), range(nbCsvFileCollumns)))
+        
+        #Extract lines
+        self.data = self._extractData(fileLines)
+        
+        if collumnsToRead != None:              
+            collumnsToDrop = [col for col in self.collumns if col not in collumnsToRead]  
+        if collumnsToDrop != None:
+            self.dropCollumns(collumnsToDrop,inPlace=True)
+        
+        
+        
+    def writeCsvFile(self,filePath,titleRow=True, collumnsToWrite=None,collumnsToDrop=None, failSafe=False):
+        '''
+        Write the array in a csv file.
+
+        Accept a list of collumns to write OR a list a collumns to drop.
+        If a collumn listed doesn't exists, return an error, unless the failSafe flag is set to True.
 
         '''
-        return selectRows(lambda x: not dropFunction(x))
+        stringToWrite = self.__str__(printHeader=titleRow,MAXROWS=-1)
+
+        with open(filePath,'w') as csvFile:
+            csvFile.write(stringToWrite)
+            
+    #General DataFrame functions
+
+    @timeit
+    def groupBy(self,key,value=None):
+        '''
+            
+            Splits the dataFrame in rows that match on the 'key' collumns.
+            Return a dictionary of dataFrames with 'value' collumns 
+            
+            Key and value should be a list of collumns as names or indices.
+
+            By default Value is all the collumns
+        '''
+        if value==None:
+            value= self.collumns
+
+        dataFrameDict={}
+        
+        for row in self:
+            dataFrameDict.setdefault(self._subRow(row,key),DataFrame(value)).addRow(self._subRow(row,value))
+        
+        
+        return dataFrameDict
+        
+    @timeit
+    def agregate(self,aggregationCollumn,agregationFunction=None,inPlace=False):
+        '''
+            Returns a dataFrame where rows matching on all collumns but aggregationCollumn is replace by one single collumn.
+            the value of aggregationCollumn for this row is defined by agregationFunction.
+
+            The defaulf agregationFunction is sum
+
+            if inPlace is True, then the agregation is done in place.
+        '''
+        col = self._indexifyCollumn(aggregationCollumn)
+        
+        if agregationFunction==None:
+            agregationFunction = sum
+        key =self.collumns
+        key.pop(col)
+        agregationmap = self.groupBy(key,[aggregationCollumn])
+
+        finaldf = DataFrame(self.collumns) 
+        for key,val in agregationmap.items():
+            agregatedValue = agregationFunction(val.getCollumn(aggregationCollumn))
+            finaldf.addRow(key[:col]+(agregatedValue,)+key[col:])
+        if inPlace:
+            self.data = finaldf.data
+        else:        
+            return finaldf
+
+    def sort(self,collumns, ascending=True):
+        ''' 
+        Sort the rows acording to the collumns list
+
+        '''
+        cols = list(map(self._indexifyCollumn,collumns))
+        
+        def key(x):
+            return tuple([x[i] for i in cols])
+        self.data.sort(key=key,reverse = not ascending)
+            
+
+
 
     
     
