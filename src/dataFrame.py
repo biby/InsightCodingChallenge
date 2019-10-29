@@ -62,7 +62,7 @@ class DataFrame:
     @collumns.setter
     def collumns(self,collumnsName):    
         if self._collumns !=None and len(collumnsName)!=self.nbCollumns:
-            raise Exception('','Lenghts do not match')
+            raise Exception("The number of collumns does not match with the dataFrame's one")
         self._collumns = list(collumnsName)
 
     @property
@@ -98,11 +98,16 @@ class DataFrame:
             
         ''' 
         if isinstance(collumnName,str):
-            col = self.collumns.index(collumnName)
+            try:
+                col = self.collumns.index(collumnName)
+            except ValueError as error
+                error.args = ('Collumn ' + collumnName + ' does not exists')
+                raise
+                
         elif isinstance(collumnName,int):
             col = collumnName
         else:
-            raise Exception('')
+            raise Exception('Wrong type for a collumn')
         return col  
     
     def castCollumnType(self,collumnName,collumnType):
@@ -126,11 +131,11 @@ class DataFrame:
 
         if newCollumn!=None:
             if len(newCollumn) != self.nbRows:
-                raise  Exception('','')
+                raise  Exception('The given collumn does not have the correct length')
         elif defaultValue !=None:
             newCollumn = [defaultValue]*self.nbRows
         else:
-            raise Exception('','')
+            raise Exception('Either a collumn or a defaultValue must be provided')
         newCollumnNames = self.collumns
         if collumnNumber==-1:
             newCollumnNames.append(collumnName)
@@ -236,7 +241,7 @@ class DataFrame:
             Append a row to the dataFrame at index
         '''
         if not self._rowvalidity(row):
-            raise Exception('Unvalid Row','')
+            raise Exception('Unvalid Row')
         if index==None:
             self.data.append(row)
         else:
@@ -262,7 +267,7 @@ class DataFrame:
     def _formatRow(self,line):
         row= tuple(map(lambda x: x.strip(), line.split(self._delimiter)))
         if not self._rowvalidity(row):
-                raise Exception('CSV format Error','')
+                raise Exception('CSV format Error')
         return row
 
     def _extractData(self,fileLines):
@@ -281,7 +286,7 @@ class DataFrame:
         self._delimiter = delimiter
         
         if collumnsToDrop != None and collumnsToRead != None:
-            raise Exception('','')
+            raise Exception('Only one of the two arguments collumnsToDrop and CollumnsToRead can be passed')
 
         with open(filePath,'r') as csvFile:
             fileContent = csvFile.read()
