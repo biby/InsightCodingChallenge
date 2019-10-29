@@ -34,6 +34,8 @@ class datetype():
     def __str__(self):
         return self.dt.strftime(self.dateFormat)
     
+    def monthDiff(self, date2):
+        return 12*(self.dt.year - date2.dt.year) + (self.dt.month - date2.dt.month) 
     
 def roundHalfUp(n):
     '''
@@ -46,13 +48,22 @@ def roundHalfUp(n):
     else: 
         return q
 
-def partialaverage(collumn):
-    if not collumn:
+def partialaverage(valueCollumn,dateCollumn=None):
+    if len(valueCollumn)!=len(dateCollumn):
+        raise Exceptions('The two list should have the same lenght')    
+    if not valueCollumn:
         return []
     partialaverages = [0]
-    tot = collumn[0]
-    for i, val in enumerate(collumn[1:]):
-        partialaverages.append(roundHalfUp(tot/(i+1)))
+    
+    tot = valueCollumn[0]
+    if dateCollumn != None:
+        monthDifferences = map(lambda date:date.monthDiff(dateCollumn[0]),dateCollumn[1:])
+    else:
+        monthDifferences = range(1,len(valueCollumn))
+
+ 
+    for val,monthDifference in zip(valueCollumn[1:],monthDifferences):        
+        partialaverages.append(roundHalfUp(tot/monthDifference))
         tot+=val        
     return partialaverages
 
@@ -75,7 +86,8 @@ if __name__=="__main__":
     finaldf = DataFrame(df2.collumns+['Average'])
     for df in dic.values():
         df.sort(['Date'])
-        partaverage = partialaverage(df.getCollumn('Value'))
+        partaverage = partialaverage(df.getCollumn('Value'),df.getCollumn('Date'))
+        #partaverage = partialaverage(df.getCollumn('Value'))
         df = df.addCollumn('Average', newCollumn=partaverage)
         
         finaldf.extend(df)
