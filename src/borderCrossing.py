@@ -7,6 +7,10 @@ from dataFrame import DataFrame
 dateFormat = '%m/%d/%Y %I:%M:%S %p'
 
 class datetype():
+    '''
+        Date type
+        encapsulates a datetime class.
+    '''
     def __init__(self,stringDate):
         self.dateFormat=dateFormat
         self.dt = datetime.datetime.strptime(stringDate,self.dateFormat)
@@ -35,6 +39,9 @@ class datetype():
         return self.dt.strftime(self.dateFormat)
     
     def monthDiff(self, date2):
+        '''
+            return the number of months between self and date2
+        '''
         return 12*(self.dt.year - date2.dt.year) + (self.dt.month - date2.dt.month) 
     
 def roundHalfUp(n):
@@ -49,6 +56,11 @@ def roundHalfUp(n):
         return q
 
 def partialaverage(valueCollumn,dateCollumn=None):
+    """
+        Create the average collumn. 
+        If no dateCollumn is provided compute the average with respect to the number of rows.
+        If a date Collumn is provided compute the average with respect to the number of months that passed (considers missing months as value 0 months)
+    """
     if len(valueCollumn)!=len(dateCollumn):
         raise Exceptions('The two list should have the same lenght')    
     if not valueCollumn:
